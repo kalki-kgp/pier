@@ -1,0 +1,5 @@
+[project]
+name = "pierd"
+version = "0.1.0"
+requires-python = ">=3.12,<3.14"
+dependencies = ["mlx-lm>=0.31", "huggingface_hub>=0.30", "zeroconf>=0.140"]
