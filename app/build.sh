@@ -9,5 +9,6 @@ swiftc -O -swift-version 5 -parse-as-library -target arm64-apple-macosx26.0 \
     -framework SwiftUI -framework AppKit \
     Sources/*.swift -o "$APP/Contents/MacOS/Pier"
 cp Info.plist "$APP/Contents/Info.plist"
+cp Assets/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
 codesign --force --sign - --identifier dev.kalki.pier "$APP"
 echo "built $PWD/$APP"

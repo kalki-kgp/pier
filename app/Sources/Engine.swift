@@ -150,14 +150,28 @@ final class Engine: ObservableObject {
         Task { await run() }
     }
 
-    /// Where the engine's code and venv live: PIER_ENGINE, else ../engine beside the app's
-    /// project folder, else ~/Developer/pier/engine.
-    private var engineDir: URL {
-        if let env = ProcessInfo.processInfo.environment["PIER_ENGINE"] { return URL(fileURLWithPath: env) }
-        let beside = Bundle.main.bundleURL.deletingLastPathComponent().deletingLastPathComponent()
-            .appendingPathComponent("engine")
-        if FileManager.default.fileExists(atPath: beside.appendingPathComponent("pierd").path) { return beside }
-        return FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Developer/pier/engine")
+    /// The Python and engine to run: the copy inside the app (release builds), else a dev
+    /// checkout's venv (PIER_ENGINE, ../engine beside the app, or ~/Developer/pier/engine).
+    private var engineLaunch: (python: URL, dir: URL, env: [String: String])? {
+        let fm = FileManager.default
+        if let res = Bundle.main.resourceURL {
+            let python = res.appendingPathComponent("python/bin/python3.13")
+            let engine = res.appendingPathComponent("engine")
+            if fm.isExecutableFile(atPath: python.path) {
+                return (python, engine, ["PYTHONPATH": "\(engine.path):\(engine.path)/site-packages",
+                                         "PYTHONNOUSERSITE": "1", "PYTHONDONTWRITEBYTECODE": "1"])
+            }
+        }
+        var candidates: [URL] = []
+        if let env = ProcessInfo.processInfo.environment["PIER_ENGINE"] { candidates.append(URL(fileURLWithPath: env)) }
+        candidates.append(Bundle.main.bundleURL.deletingLastPathComponent().deletingLastPathComponent()
+            .appendingPathComponent("engine"))
+        candidates.append(fm.homeDirectoryForCurrentUser.appendingPathComponent("Developer/pier/engine"))
+        for dir in candidates {
+            let python = dir.appendingPathComponent(".venv/bin/python")
+            if fm.isExecutableFile(atPath: python.path) { return (python, dir, [:]) }
+        }
+        return nil
     }
 
     private func run() async {
@@ -176,10 +190,8 @@ final class Engine: ObservableObject {
     }
 
     private func launch() {
-        let dir = engineDir
-        let python = dir.appendingPathComponent(".venv/bin/python")
-        guard FileManager.default.isExecutableFile(atPath: python.path) else {
-            problem = "Can't find the engine at \(dir.path)"
+        guard let (python, dir, extra) = engineLaunch else {
+            problem = "Can't find Pier's engine"
             return
         }
         let p = Process()
@@ -187,6 +199,7 @@ final class Engine: ObservableObject {
         p.arguments = ["-m", "pierd"]
         p.currentDirectoryURL = dir
         var env = ProcessInfo.processInfo.environment
+        env.merge(extra) { _, new in new }
         env["PIER_PARENT_PID"] = String(getpid())
         env["PIER_PORT"] = String(port)
         p.environment = env

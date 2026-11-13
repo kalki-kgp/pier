@@ -8,11 +8,21 @@ Turns a Mac into a private, OpenAI-compatible LLM server running MLX models on A
   - Bonjour `_pier._tcp` discovery; the link to each peer is classified as Thunderbolt Bridge, Wi-Fi, Ethernet, or same Mac
 - `app/` – SwiftUI app. It starts `pierd` if nothing is listening and stops it on quit.
 
-## Run
+## Install
+Download `Pier-<version>.dmg` from [Releases](https://github.com/kalki-kgp/pier/releases) and drag Pier to Applications. It needs an Apple silicon Mac on macOS 26 and brings its own Python and MLX, so nothing else is needed.
+
+Pier isn't notarized, so clear the download flag once before the first launch:
+```sh
+xattr -dr com.apple.quarantine /Applications/Pier.app
+open /Applications/Pier.app
+```
+
+## Build from source
 ```sh
 cd engine && uv venv --python 3.13 && uv pip install -r pyproject.toml
 cd ../app && ./build.sh && open Pier.app
 ```
+`app/release.sh` builds the self-contained app (bundled Python + engine) and `dist/Pier-<version>.dmg`.
 Logs: `~/Library/Logs/Pier/pierd.log`.
 
 Fake second node on the same Mac, for working on the canvas:
